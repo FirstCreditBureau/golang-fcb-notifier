@@ -35,8 +35,6 @@ test:
     - stage
     - dev
   stage: test
-  dependencies:
-    - swagger build
   image: golang:1.14.0-stretch
   allow_failure: false
   environment:
@@ -54,8 +52,6 @@ build app:
     - stage
     - dev
   stage: build
-  dependencies:
-    - swagger build
   image: golang:1.14.0-stretch
   variables:
     CGO_ENABLED: 0
