@@ -1,0 +1,144 @@
+stages:
+  - configuration
+  - test
+  - build
+  - release
+  - deploy
+
+
+configuration:
+  image: golang:1.14.0-stretch
+  stage: configuration
+  only:
+    - master
+    - stage
+    - dev
+  allow_failure: false
+  script:
+    - cat ${CONFIG} > config/conf.json
+    - go test -v ./internal/config/config_test.go
+
+lint:
+  only:
+    - master
+    - stage
+    - dev
+  stage: test
+  image: golangci/golangci-lint
+  script:
+    - golangci-lint run --timeout=5m
+  allow_failure: true
+
+test:
+  only:
+    - master
+    - stage
+    - dev
+  stage: test
+  dependencies:
+    - swagger build
+  image: golang:1.14.0-stretch
+  allow_failure: false
+  environment:
+    name: test
+  before_script:
+    - mkdir -p .cache
+    - export GOPATH="$CI_PROJECT_DIR/.cache"
+  script:
+    - cat ${CONFIG} > config/conf.json
+    - go test -v -cover ./...
+
+build app:
+  only:
+    - master
+    - stage
+    - dev
+  stage: build
+  dependencies:
+    - swagger build
+  image: golang:1.14.0-stretch
+  variables:
+    CGO_ENABLED: 0
+    GOOS: linux
+    GOARCH: amd64
+  script:
+    - go build -o bin/golang-fcb-notifier .
+  artifacts:
+    paths:
+      - bin/golang-fcb-notifier
+    expire_in: 5 minute
+  allow_failure: false
+
+release:
+  only:
+    - master
+    - stage
+    - dev
+  stage: release
+  dependencies:
+    - build app
+  cache: {}
+  image: docker:stable
+  services:
+    - docker:dind
+  variables:
+    DOCKER_HOST: tcp://localhost:2375
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_BUILDKIT: 1
+    DOCKER_DRIVER: overlay2
+  script:
+    - docker info
+    - docker build -t ${CI_REGISTRY_IMAGE}:${CI_PIPELINE_ID} .
+    - echo ${CI_BUILD_TOKEN} | docker login -u ${CI_REGISTRY_USER} --password-stdin ${CI_REGISTRY}
+    - docker push ${CI_REGISTRY_IMAGE}:${CI_PIPELINE_ID}
+  allow_failure: false
+
+.base_deploy:
+  stage: deploy
+  image: thisiskj/kubectl-envsubst
+  variables:
+    PUBLISH_PATH: /${CI_ENVIRONMENT_SLUG}/${CI_PROJECT_NAME}
+  dependencies:
+    - release
+  script:
+    - export APP_PORT=8080
+    # CONFIGS
+    - export CONFIG_CONTENT=$(cat ${CONFIG} | tr -d '\n')
+    # IMAGE_PULL_SECRET
+    - export REGISTRY_BASIC=$(echo -n ${CI_DEPLOY_USER}:${CI_DEPLOY_PASSWORD} | base64)
+    - cat ./deploy/secrets/image-pull-secret.yml | envsubst | kubectl apply -f -
+    - cat ./deploy/secrets/config-secret.yml | envsubst | kubectl apply -f -
+    - cat ./deploy/network/service.yml | envsubst | kubectl apply -f -
+    - cat ./deploy/network/ingress.yml | envsubst | kubectl apply -f -
+    - cat ./deploy/deployment.yml | envsubst | kubectl apply -f -
+    # Show Path
+    - echo ${PUBLISH_PATH}
+  allow_failure: false
+
+deploy on dev:
+  only:
+    - dev
+  environment:
+    name: development
+  variables:
+    REPLICAS: 1
+  extends: .base_deploy
+
+deploy on stage:
+  only:
+    - stage
+  environment:
+    name: staging
+  variables:
+    REPLICAS: 1
+  extends: .base_deploy
+
+deploy on production:
+  only:
+    - master
+  when: manual
+  environment:
+    name: production
+  variables:
+    REPLICAS: 1
+  extends: .base_deploy
