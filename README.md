@@ -4,9 +4,9 @@
 Вы можете использовать данный код для развертывания сервиса на вашей стороне для приема сообщении от ТОО ПКБ.
 
 Имеется примеры на 3 языках:
-- Golang
-- Python
-- Java
+- [Golang](https://github.com/FirstCreditBureau/golang-fcb-notifier)
+- [Python](https://github.com/FirstCreditBureau/python-fcb-notifier)
+- [Java](https://github.com/FirstCreditBureau/java-fcb-notifier)
 
 ## О сервисе FCB Notifier
 
