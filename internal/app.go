@@ -5,7 +5,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"gitlabce.1cb.kz/notifier/golang-fcb-notifier/internal/config"
 	"gitlabce.1cb.kz/notifier/golang-fcb-notifier/internal/controllers"
+	"gitlabce.1cb.kz/notifier/golang-fcb-notifier/internal/dto"
 	"gitlabce.1cb.kz/notifier/golang-fcb-notifier/internal/handler"
+	"net/http"
 )
 
 // author zhasulan
@@ -40,6 +42,9 @@ func (a *app) Init() {
 
 	endpoint := controllers.EndpointHandler(a.config, auth)
 	a.router.POST("/endpoint", endpoint.Endpoint)
+	a.router.GET("/health", func(context *gin.Context) {
+		context.JSON(http.StatusOK, dto.Response{Code: http.StatusOK, Message: "OK"})
+	})
 }
 
 func (a *app) Run() {
