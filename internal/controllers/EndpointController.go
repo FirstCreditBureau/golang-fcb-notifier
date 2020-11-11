@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"github.com/gin-gonic/gin"
 	"gitlabce.1cb.kz/notifier/golang-fcb-notifier/internal/config"
@@ -58,8 +59,16 @@ func (controller *endpointController) Endpoint(context *gin.Context) {
 		return
 	}
 
-	checksum := sha256.Sum256(content)
-	if notifierRequest.Checksum != string(checksum[:]) {
+	//content_reader := bytes.NewReader(content)
+	//sha := sha256.New()
+	//r := io.TeeReader(content_reader, sha)
+	//if _, err = io.Copy(content_reader, r); err != nil {
+	//	return "", err
+	//}
+
+	enc := sha256.Sum256(content)
+	checksum := hex.EncodeToString(enc[:])
+	if notifierRequest.Checksum != string(checksum) {
 		err := errors.New("checksum not equal to calculated hash sum from requested file")
 		context.JSON(http.StatusInternalServerError, dto.Response{Code: http.StatusInternalServerError, Message: err.Error()})
 		_ = context.Error(err)
