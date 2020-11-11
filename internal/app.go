@@ -7,6 +7,7 @@ import (
 	"gitlabce.1cb.kz/notifier/golang-fcb-notifier/internal/controllers"
 	"gitlabce.1cb.kz/notifier/golang-fcb-notifier/internal/dto"
 	"gitlabce.1cb.kz/notifier/golang-fcb-notifier/internal/handler"
+	"gitlabce.1cb.kz/notifier/golang-fcb-notifier/internal/middleware"
 	"net/http"
 )
 
@@ -41,6 +42,7 @@ func (a *app) Init() {
 	}
 
 	endpoint := controllers.EndpointHandler(a.config, auth)
+	a.router.Use(middleware.Logger(a.log), gin.Recovery())
 	a.router.POST("/endpoint", endpoint.Endpoint)
 	a.router.GET("/health", func(context *gin.Context) {
 		context.JSON(http.StatusOK, dto.Response{Code: http.StatusOK, Message: "OK"})
