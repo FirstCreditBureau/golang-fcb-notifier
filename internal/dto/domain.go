@@ -11,7 +11,7 @@ type Auth struct {
 }
 
 type NotifierRequest struct {
-	Code     string `json:""`
+	Code     string `json:"code"`
 	ProxyURL string `json:"proxy_url"`
 	Filename string `json:"filename"`
 	Checksum string `json:"checksum"`
