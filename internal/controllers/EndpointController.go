@@ -41,14 +41,25 @@ func (controller *endpointController) Endpoint(context *gin.Context) {
 
 	// check token expire
 	if time.Now().After(controller.authentication.Access.ExpiresAt) {
-		authentication := handler.AuthenticationHandler(controller.config)
-		auth, err := authentication.Auth()
-		if err != nil {
-			context.JSON(http.StatusInternalServerError, dto.Response{Code: http.StatusInternalServerError, Message: err.Error()})
-			_ = context.Error(err)
-			return
+		if time.Now().After(controller.authentication.Refresh.ExpiresAt) {
+			authentication := handler.AuthenticationHandler(controller.config)
+			auth, err := authentication.Auth()
+			if err != nil {
+				context.JSON(http.StatusInternalServerError, dto.Response{Code: http.StatusInternalServerError, Message: err.Error()})
+				_ = context.Error(err)
+				return
+			}
+			controller.authentication = auth
+		} else {
+			authentication := handler.AuthenticationHandler(controller.config)
+			auth, err := authentication.Refresh(dto.TokenRefresh{TokenHash: controller.authentication.Refresh.Hash})
+			if err != nil {
+				context.JSON(http.StatusInternalServerError, dto.Response{Code: http.StatusInternalServerError, Message: err.Error()})
+				_ = context.Error(err)
+				return
+			}
+			controller.authentication = auth
 		}
-		controller.authentication = auth
 	}
 
 	message := handler.MessageHandler(controller.config, notifierRequest.ProxyURL, dto.CDNProxyRequest{Code: notifierRequest.Code, Filename: notifierRequest.Filename}, controller.authentication)
