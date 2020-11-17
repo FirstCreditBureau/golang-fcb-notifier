@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"gitlabce.1cb.kz/notifier/golang-fcb-notifier/internal/config"
 	"gitlabce.1cb.kz/notifier/golang-fcb-notifier/internal/dto"
 	"io/ioutil"
@@ -44,7 +45,7 @@ func (a message) GetFile() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	request.Header.Add("Authorization", "Bearer "+a.authentication.Access.Hash)
+	request.Header.Add("Authorization", fmt.Sprintf("Bearer %s", a.authentication.Access.Hash))
 
 	client := &http.Client{}
 	response, err := client.Do(request)
@@ -62,6 +63,6 @@ func (a message) GetFile() ([]byte, error) {
 
 		return bodyBytes, nil
 	} else {
-		return nil, errors.New("CDN proxy response error")
+		return nil, errors.New(fmt.Sprintf("CDN proxy response error. Code: %d", response.StatusCode))
 	}
 }
