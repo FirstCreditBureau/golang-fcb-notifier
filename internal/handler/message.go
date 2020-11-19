@@ -3,7 +3,6 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"gitlabce.1cb.kz/notifier/golang-fcb-notifier/internal/config"
 	"gitlabce.1cb.kz/notifier/golang-fcb-notifier/internal/dto"
@@ -63,6 +62,6 @@ func (a message) GetFile() ([]byte, error) {
 
 		return bodyBytes, nil
 	} else {
-		return nil, errors.New(fmt.Sprintf("CDN proxy response error. Code: %d", response.StatusCode))
+		return nil, fmt.Errorf("CDN proxy response error. Code: %d", response.StatusCode)
 	}
 }
