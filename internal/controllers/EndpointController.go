@@ -9,7 +9,6 @@ import (
 	"gitlabce.1cb.kz/notifier/golang-fcb-notifier/internal/dto"
 	"gitlabce.1cb.kz/notifier/golang-fcb-notifier/internal/handler"
 	"net/http"
-	"time"
 )
 
 // author zhasulan
@@ -39,29 +38,6 @@ func (controller *endpointController) Endpoint(context *gin.Context) {
 		return
 	}
 
-	// check token expire
-	if time.Now().After(controller.authentication.Access.ExpiresAt) {
-		if time.Now().After(controller.authentication.Refresh.ExpiresAt) {
-			authentication := handler.AuthenticationHandler(controller.config)
-			auth, err := authentication.Auth()
-			if err != nil {
-				context.JSON(http.StatusInternalServerError, dto.Response{Code: http.StatusInternalServerError, Message: err.Error()})
-				_ = context.Error(err)
-				return
-			}
-			controller.authentication = auth
-		} else {
-			authentication := handler.AuthenticationHandler(controller.config)
-			auth, err := authentication.Refresh(dto.TokenRefresh{TokenHash: controller.authentication.Refresh.Hash})
-			if err != nil {
-				context.JSON(http.StatusInternalServerError, dto.Response{Code: http.StatusInternalServerError, Message: err.Error()})
-				_ = context.Error(err)
-				return
-			}
-			controller.authentication = auth
-		}
-	}
-
 	message := handler.MessageHandler(controller.config, notifierRequest.ProxyURL, dto.CDNProxyRequest{Code: notifierRequest.Code, Filename: notifierRequest.Filename}, controller.authentication)
 	content, err := message.GetFile()
 	if err != nil {
@@ -69,13 +45,6 @@ func (controller *endpointController) Endpoint(context *gin.Context) {
 		_ = context.Error(err)
 		return
 	}
-
-	//content_reader := bytes.NewReader(content)
-	//sha := sha256.New()
-	//r := io.TeeReader(content_reader, sha)
-	//if _, err = io.Copy(content_reader, r); err != nil {
-	//	return "", err
-	//}
 
 	enc := sha256.Sum256(content)
 	checksum := hex.EncodeToString(enc[:])

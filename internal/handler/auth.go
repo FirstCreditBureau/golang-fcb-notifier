@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"gitlabce.1cb.kz/notifier/golang-fcb-notifier/internal/config"
 	"gitlabce.1cb.kz/notifier/golang-fcb-notifier/internal/dto"
 	"io/ioutil"
 	"net/http"
+	"time"
 )
 
 // author zhasulan
@@ -64,7 +65,7 @@ func (a authentication) Auth() (dto.LoginResult, error) {
 
 		return loginResult, nil
 	} else {
-		return loginResult, errors.New("authentication server response error")
+		return loginResult, fmt.Errorf("authentication server response error. Code: %d", response.StatusCode)
 	}
 }
 
@@ -103,6 +104,28 @@ func (a authentication) Refresh(tokenRefresh dto.TokenRefresh) (dto.LoginResult,
 
 		return loginResult, nil
 	} else {
-		return loginResult, errors.New("authentication server response error")
+		return loginResult, fmt.Errorf("authentication server response error. Code: %d", response.StatusCode)
 	}
+}
+
+func GetBearerToken(config *config.Configuration, auth dto.LoginResult) (string, error) {
+	if time.Now().After(auth.Access.ExpiresAt) || auth == (dto.LoginResult{}) {
+		if time.Now().After(auth.Refresh.ExpiresAt) || auth == (dto.LoginResult{}) {
+			authentication := AuthenticationHandler(config)
+			a, err := authentication.Auth()
+			if err != nil {
+				return "", err
+			}
+			return fmt.Sprintf("Bearer %s", a.Access.Hash), nil
+		} else {
+			authentication := AuthenticationHandler(config)
+			a, err := authentication.Refresh(dto.TokenRefresh{TokenHash: auth.Refresh.Hash})
+			if err != nil {
+				return "", err
+			}
+			return fmt.Sprintf("Bearer %s", a.Access.Hash), nil
+		}
+	}
+
+	return fmt.Sprintf("Bearer %s", auth.Access.Hash), nil
 }

@@ -44,7 +44,11 @@ func (a message) GetFile() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	request.Header.Add("Authorization", fmt.Sprintf("Bearer %s", a.authentication.Access.Hash))
+	token, err := GetBearerToken(a.config, a.authentication)
+	if err != nil {
+		return nil, err
+	}
+	request.Header.Add("Authorization", token)
 
 	client := &http.Client{}
 	response, err := client.Do(request)
