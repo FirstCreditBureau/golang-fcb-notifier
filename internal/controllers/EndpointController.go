@@ -9,6 +9,7 @@ import (
 	"gitlabce.1cb.kz/notifier/golang-fcb-notifier/internal/dto"
 	"gitlabce.1cb.kz/notifier/golang-fcb-notifier/internal/handler"
 	"net/http"
+	"time"
 )
 
 // author zhasulan
@@ -36,6 +37,28 @@ func (controller *endpointController) Endpoint(context *gin.Context) {
 		context.JSON(http.StatusBadRequest, dto.Response{Code: http.StatusBadRequest, Message: err.Error()})
 		_ = context.Error(err)
 		return
+	}
+
+	if time.Now().After(controller.authentication.Access.ExpiresAt) || controller.authentication == (dto.LoginResult{}) {
+		if time.Now().After(controller.authentication.Refresh.ExpiresAt) || controller.authentication == (dto.LoginResult{}) {
+			authentication := handler.AuthenticationHandler(controller.config)
+			auth, err := authentication.Auth()
+			if err != nil {
+				context.JSON(http.StatusInternalServerError, dto.Response{Code: http.StatusInternalServerError, Message: err.Error()})
+				_ = context.Error(err)
+				return
+			}
+			controller.authentication = auth
+		} else {
+			authentication := handler.AuthenticationHandler(controller.config)
+			auth, err := authentication.Refresh(dto.TokenRefresh{TokenHash: controller.authentication.Refresh.Hash})
+			if err != nil {
+				context.JSON(http.StatusInternalServerError, dto.Response{Code: http.StatusInternalServerError, Message: err.Error()})
+				_ = context.Error(err)
+				return
+			}
+			controller.authentication = auth
+		}
 	}
 
 	message := handler.MessageHandler(controller.config, notifierRequest.ProxyURL, dto.CDNProxyRequest{Code: notifierRequest.Code, Filename: notifierRequest.Filename}, controller.authentication)
