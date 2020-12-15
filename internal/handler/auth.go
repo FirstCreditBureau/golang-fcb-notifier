@@ -128,9 +128,5 @@ func (a authentication) IsValid(tokenIsValid dto.Token) bool {
 
 	defer func() { _ = response.Body.Close() }()
 
-	if response.StatusCode != http.StatusOK {
-		return false
-	}
-
-	return true
+	return response.StatusCode == http.StatusOK
 }
