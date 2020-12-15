@@ -17,7 +17,8 @@ import (
 type Authentication interface {
 	getUserB64Auth() string
 	Auth() (dto.LoginResult, error)
-	Refresh(tokenRefresh dto.TokenRefresh) (dto.LoginResult, error)
+	Refresh(tokenRefresh dto.Token) (dto.LoginResult, error)
+	IsValid(tokenIsValid dto.Token) bool
 }
 
 type authentication struct {
@@ -68,7 +69,7 @@ func (a authentication) Auth() (dto.LoginResult, error) {
 	}
 }
 
-func (a authentication) Refresh(tokenRefresh dto.TokenRefresh) (dto.LoginResult, error) {
+func (a authentication) Refresh(tokenRefresh dto.Token) (dto.LoginResult, error) {
 	var loginResult dto.LoginResult
 
 	tokenRefreshBuffer := new(bytes.Buffer)
@@ -105,4 +106,31 @@ func (a authentication) Refresh(tokenRefresh dto.TokenRefresh) (dto.LoginResult,
 	} else {
 		return loginResult, fmt.Errorf("authentication server response error. Code: %d", response.StatusCode)
 	}
+}
+
+func (a authentication) IsValid(tokenIsValid dto.Token) bool {
+	tokenRefreshBuffer := new(bytes.Buffer)
+	err := json.NewEncoder(tokenRefreshBuffer).Encode(tokenIsValid)
+	if err != nil {
+		return false
+	}
+
+	request, err := http.NewRequest("POST", a.config.FCBNotifierHost+a.config.Auth.IsValid, tokenRefreshBuffer)
+	if err != nil {
+		return false
+	}
+
+	client := &http.Client{}
+	response, err := client.Do(request)
+	if err != nil {
+		return false
+	}
+
+	defer func() { _ = response.Body.Close() }()
+
+	if response.StatusCode != http.StatusOK {
+		return false
+	}
+
+	return true
 }

@@ -21,6 +21,6 @@ type LoginResult struct {
 	PassChangeNeeded bool `json:"pass_change_needed"`
 }
 
-type TokenRefresh struct {
+type Token struct {
 	TokenHash string `json:"token_hash"`
 }

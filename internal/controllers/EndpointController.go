@@ -39,9 +39,9 @@ func (controller *endpointController) Endpoint(context *gin.Context) {
 		return
 	}
 
+	authentication := handler.AuthenticationHandler(controller.config)
 	if time.Now().After(controller.authentication.Access.ExpiresAt) || controller.authentication == (dto.LoginResult{}) {
 		if time.Now().After(controller.authentication.Refresh.ExpiresAt) || controller.authentication == (dto.LoginResult{}) {
-			authentication := handler.AuthenticationHandler(controller.config)
 			auth, err := authentication.Auth()
 			if err != nil {
 				context.JSON(http.StatusInternalServerError, dto.Response{Code: http.StatusInternalServerError, Message: err.Error()})
@@ -50,8 +50,18 @@ func (controller *endpointController) Endpoint(context *gin.Context) {
 			}
 			controller.authentication = auth
 		} else {
-			authentication := handler.AuthenticationHandler(controller.config)
-			auth, err := authentication.Refresh(dto.TokenRefresh{TokenHash: controller.authentication.Refresh.Hash})
+
+			auth, err := authentication.Refresh(dto.Token{TokenHash: controller.authentication.Refresh.Hash})
+			if err != nil {
+				context.JSON(http.StatusInternalServerError, dto.Response{Code: http.StatusInternalServerError, Message: err.Error()})
+				_ = context.Error(err)
+				return
+			}
+			controller.authentication = auth
+		}
+	} else {
+		if !authentication.IsValid(dto.Token{TokenHash: controller.authentication.Access.Hash}) {
+			auth, err := authentication.Auth()
 			if err != nil {
 				context.JSON(http.StatusInternalServerError, dto.Response{Code: http.StatusInternalServerError, Message: err.Error()})
 				_ = context.Error(err)

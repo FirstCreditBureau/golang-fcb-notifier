@@ -8,6 +8,7 @@ type Auth struct {
 	Password string `json:"password"`
 	Login    string `json:"login"`
 	Refresh  string `json:"refresh"`
+	IsValid  string `json:"is_valid"`
 }
 
 type NotifierRequest struct {
